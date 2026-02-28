@@ -474,12 +474,11 @@ body::after {
 .toast.show { opacity: 1; transform: translateX(-50%) translateY(0) }
 
 /* ── MOBILE ── */
-@media(max-width: 768px) {
+@media(max-width: 1024px) {
   :root { --sb-w: 85vw }
 
-  /* Fix: switch app to block so sidebar (position:fixed) never
-     participates in layout — prevents iOS Safari flex+fixed bug
-     that causes the page to be 240px too wide */
+  /* Switch app to block so the fixed sidebar never participates in
+     layout — prevents iOS Safari flex+fixed positioning bug         */
   .app { display: block; min-height: calc(100vh - 44px) }
   .main { width: 100% }
 
@@ -487,12 +486,12 @@ body::after {
     position: fixed; top: 44px; left: 0;
     height: calc(100vh - 44px);
     z-index: 200; box-shadow: 4px 0 24px rgba(0,0,0,.1);
-    transform: translateX(-100%); width: var(--sb-w);
-    /* prevent desktop width:0 rule from conflicting */
+    /* only animate transform, not width — avoids width:0 conflict */
     transition: transform .22s ease;
   }
-  .sidebar:not(.hidden) { transform: translateX(0); width: var(--sb-w) }
+  /* sidebar starts hidden (class set in HTML); JS toggles it */
   .sidebar.hidden { transform: translateX(-100%); width: var(--sb-w) }
+  .sidebar:not(.hidden) { transform: translateX(0); width: var(--sb-w) }
   .sidebar-backdrop { display: block }
   .topbar-loc { display: none }
   .hero { padding: 22px 20px 20px }
@@ -512,12 +511,11 @@ body::after {
   }
   .forecast-wrap::-webkit-scrollbar { display: none }
   .forecast-strip { min-width: 364px }
-  /* Metrics: proper 2×2 grid with clean borders */
+  /* Metrics: 2×2 grid with clean borders */
   .metrics-col {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    padding: 0;
-    gap: 0;
+    padding: 0; gap: 0;
     border-top: 1px solid var(--bdr);
   }
   .metric {
@@ -581,7 +579,7 @@ body::after {
 <div class="app">
 
   <!-- SIDEBAR -->
-  <div class="sidebar" id="sidebar">
+  <div class="sidebar hidden" id="sidebar">
     <div class="sb-head">Locations</div>
     <div class="loc-list" id="loc-list"></div>
   </div>
@@ -750,7 +748,8 @@ const FORECAST=[
   {day:'FRI',icon:'rain',hi:28,lo:24,rain:78},
 ];
 
-let activeLoc=0,unit='C',sidebarOpen=window.innerWidth>768,selectedCity=null,selectedDay=0;
+const MOBILE_BP=1024;
+let activeLoc=0,unit='C',sidebarOpen=window.innerWidth>MOBILE_BP,selectedCity=null,selectedDay=0;
 
 const ICON_TO_COND={
   'sun':'CLEAR','partly-cloudy':'PARTLY CLOUDY',
@@ -764,12 +763,18 @@ function fmt(c){return unit==='C'?c:toF(c)}
 function toggleSidebar(){
   sidebarOpen=!sidebarOpen;
   document.getElementById('sidebar').classList.toggle('hidden',!sidebarOpen);
-  document.getElementById('sb-backdrop').classList.toggle('visible',sidebarOpen&&window.innerWidth<=768);
+  document.getElementById('sb-backdrop').classList.toggle('visible',sidebarOpen&&window.innerWidth<=MOBILE_BP);
 }
 function initSidebar(){
-  if(!sidebarOpen){
-    document.getElementById('sidebar').classList.add('hidden');
+  const el=document.getElementById('sidebar');
+  if(sidebarOpen){
+    // Desktop: remove the hidden class we set in HTML.
+    // Disable transition so the sidebar doesn't animate in on first load.
+    el.style.transition='none';
+    el.classList.remove('hidden');
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{ el.style.transition='' }));
   }
+  // Mobile: sidebar already has hidden class from HTML — nothing to do.
 }
 
 /* ── SIDEBAR RENDER ── */
@@ -836,7 +841,7 @@ function selectLoc(i){
   activeLoc=i;
   selectedDay=0;
   document.getElementById('sum-label').textContent='Today';
-  if(window.innerWidth<=768&&sidebarOpen)toggleSidebar();
+  if(window.innerWidth<=MOBILE_BP&&sidebarOpen)toggleSidebar();
   renderAll();
 }
 
