@@ -481,31 +481,54 @@ body::after {
   .sidebar:not(.hidden) { transform: translateX(0) }
   .sidebar.hidden { transform: translateX(-100%) }
   .sidebar-backdrop { display: block }
-  .hero { padding: 28px 20px 24px }
-  .hero-stats { gap: 20px; flex-wrap: wrap }
-  .summary-box { padding: 24px 20px }
-  .sources-box { padding: 20px }
+  .topbar-loc { display: none }
+  .hero { padding: 22px 20px 20px }
+  .hero-temp { font-size: clamp(72px, 21vw, 130px) }
+  .hero-unit { font-size: clamp(20px, 6vw, 40px); margin-top: 8px }
+  .hero-cond { margin-top: 10px }
+  .hero-stats { gap: 20px; margin-top: 24px; flex-wrap: wrap }
+  .summary-box { padding: 22px 20px }
+  .sources-box { padding: 18px 20px 24px }
+  .sum-text { font-size: 12px; line-height: 1.8 }
   .src-grid { grid-template-columns: repeat(2, 1fr) }
   .content-area { grid-template-columns: 1fr }
+  /* Metrics: proper 2×2 grid with clean borders */
   .metrics-col {
-    flex-direction: row; flex-wrap: wrap;
-    padding: 20px; gap: 0; border-top: 1px solid var(--bdr);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 0;
+    gap: 0;
+    border-top: 1px solid var(--bdr);
   }
-  .metric { flex: 1; min-width: 90px; padding: 16px 12px }
-  .metric + .metric { border-top: none; border-left: 1px solid var(--bdr) }
+  .metric {
+    flex: unset; min-width: unset;
+    padding: 18px 16px;
+    border-right: 1px solid var(--bdr);
+    border-bottom: 1px solid var(--bdr);
+  }
+  .metric + .metric { border-top: none; border-left: none }
+  .metric:nth-child(even) { border-right: none }
+  .metric:nth-last-child(-n+2) { border-bottom: none }
+  .metric-val { font-size: 28px }
+  /* Forecast: hide scrollbar for clean look */
   .forecast-strip {
     overflow-x: auto; -webkit-overflow-scrolling: touch;
-    grid-template-columns: repeat(7, minmax(48px, 1fr));
+    grid-template-columns: repeat(7, minmax(52px, 1fr));
+    scrollbar-width: none;
   }
+  .forecast-strip::-webkit-scrollbar { display: none }
 }
 @media(max-width: 480px) {
-  .fd { padding: 12px 5px }
-  .fd-hi { font-size: 17px }
-  .fd-name { font-size: 7px }
-  .topbar-loc { display: none }
-  .hero-stats { gap: 14px }
+  .fd { padding: 12px 6px }
+  .fd-hi { font-size: 16px }
+  .fd-lo { font-size: 8px }
+  .fd-name { font-size: 7px; letter-spacing: 1px }
+  .hero-stats { gap: 16px }
   .hstat-val { font-size: 18px }
-  .hstat-label { font-size: 6px }
+  .hstat-label { font-size: 7px; letter-spacing: 1px }
+  .metric-val { font-size: 24px }
+  .metric-label { font-size: 7px }
+  .metric-sub { font-size: 7px }
 }
 
 /* scrollbar */
