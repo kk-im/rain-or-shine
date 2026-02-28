@@ -109,7 +109,7 @@ body::after {
 .add-city-btn:hover { border-color: var(--accent); color: var(--accent) }
 
 /* ── LAYOUT ── */
-.app { display: flex; min-height: calc(100vh - 44px); overflow-x: hidden; width: 100% }
+.app { display: flex; min-height: calc(100vh - 44px); overflow-x: clip; width: 100% }
 
 /* ── SIDEBAR ── */
 .sidebar {
@@ -180,7 +180,7 @@ body::after {
 .loc-rm:hover { color: var(--accent) }
 
 /* ── MAIN ── */
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-x: hidden }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-x: clip }
 
 /* ── HERO ── */
 .hero {
@@ -232,9 +232,12 @@ body::after {
 .hstat-val.ok { color: #5a876a }
 
 /* ── FORECAST ── */
+.forecast-wrap {
+  border-bottom: 1px solid var(--bdr); flex-shrink: 0;
+  overflow-x: hidden;
+}
 .forecast-strip {
   display: grid; grid-template-columns: repeat(7, 1fr);
-  border-bottom: 1px solid var(--bdr); flex-shrink: 0;
 }
 .fd {
   padding: 18px 12px 16px;
@@ -276,6 +279,7 @@ body::after {
 .left-col {
   border-right: 1px solid var(--bdr);
   display: flex; flex-direction: column;
+  min-width: 0;
 }
 
 /* summary */
@@ -472,14 +476,23 @@ body::after {
 /* ── MOBILE ── */
 @media(max-width: 768px) {
   :root { --sb-w: 85vw }
+
+  /* Fix: switch app to block so sidebar (position:fixed) never
+     participates in layout — prevents iOS Safari flex+fixed bug
+     that causes the page to be 240px too wide */
+  .app { display: block; min-height: calc(100vh - 44px) }
+  .main { width: 100% }
+
   .sidebar {
     position: fixed; top: 44px; left: 0;
     height: calc(100vh - 44px);
     z-index: 200; box-shadow: 4px 0 24px rgba(0,0,0,.1);
     transform: translateX(-100%); width: var(--sb-w);
+    /* prevent desktop width:0 rule from conflicting */
+    transition: transform .22s ease;
   }
-  .sidebar:not(.hidden) { transform: translateX(0) }
-  .sidebar.hidden { transform: translateX(-100%) }
+  .sidebar:not(.hidden) { transform: translateX(0); width: var(--sb-w) }
+  .sidebar.hidden { transform: translateX(-100%); width: var(--sb-w) }
   .sidebar-backdrop { display: block }
   .topbar-loc { display: none }
   .hero { padding: 22px 20px 20px }
@@ -492,6 +505,13 @@ body::after {
   .sum-text { font-size: 12px; line-height: 1.8 }
   .src-grid { grid-template-columns: repeat(2, 1fr) }
   .content-area { grid-template-columns: 1fr }
+  /* Forecast: proper scroll wrapper */
+  .forecast-wrap {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .forecast-wrap::-webkit-scrollbar { display: none }
+  .forecast-strip { min-width: 364px }
   /* Metrics: proper 2×2 grid with clean borders */
   .metrics-col {
     display: grid;
@@ -510,13 +530,6 @@ body::after {
   .metric:nth-child(even) { border-right: none }
   .metric:nth-last-child(-n+2) { border-bottom: none }
   .metric-val { font-size: 28px }
-  /* Forecast: hide scrollbar for clean look */
-  .forecast-strip {
-    overflow-x: auto; -webkit-overflow-scrolling: touch;
-    grid-template-columns: repeat(7, minmax(52px, 1fr));
-    scrollbar-width: none;
-  }
-  .forecast-strip::-webkit-scrollbar { display: none }
 }
 @media(max-width: 480px) {
   .fd { padding: 12px 6px }
@@ -605,7 +618,9 @@ body::after {
     </div>
 
     <!-- FORECAST -->
-    <div class="forecast-strip" id="forecast-strip"></div>
+    <div class="forecast-wrap">
+      <div class="forecast-strip" id="forecast-strip"></div>
+    </div>
 
     <!-- CONTENT -->
     <div class="content-area">
