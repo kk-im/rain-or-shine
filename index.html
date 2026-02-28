@@ -19,13 +19,19 @@
   --sb-w:   240px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0 }
-html { overflow-x: hidden }
+html {
+  overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
+}
 body {
   background: var(--bg);
   color: var(--text);
   font-family: 'IBM Plex Mono', monospace;
   min-height: 100vh;
   overflow-x: hidden;
+  width: 100%;
+  max-width: 100vw;
   font-size: 12px;
   letter-spacing: .02em;
 }
@@ -103,7 +109,7 @@ body::after {
 .add-city-btn:hover { border-color: var(--accent); color: var(--accent) }
 
 /* ── LAYOUT ── */
-.app { display: flex; min-height: calc(100vh - 44px) }
+.app { display: flex; min-height: calc(100vh - 44px); overflow-x: hidden; width: 100% }
 
 /* ── SIDEBAR ── */
 .sidebar {
@@ -174,7 +180,7 @@ body::after {
 .loc-rm:hover { color: var(--accent) }
 
 /* ── MAIN ── */
-.main { flex: 1; min-width: 0; display: flex; flex-direction: column }
+.main { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow-x: hidden }
 
 /* ── HERO ── */
 .hero {
