@@ -19,6 +19,7 @@
   --sb-w:   240px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0 }
+html { overflow-x: hidden }
 body {
   background: var(--bg);
   color: var(--text);
@@ -123,15 +124,25 @@ body::after {
   text-transform: uppercase; color: var(--dim);
 }
 .loc-list { overflow-y: auto; flex: 1 }
+.loc-swipe-wrap { position: relative; overflow: hidden }
+.loc-delete-bg {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 80px;
+  background: var(--accent); display: flex;
+  align-items: center; justify-content: center;
+  color: #fff; font-size: 7px; letter-spacing: 2px;
+  text-transform: uppercase; user-select: none;
+}
 .loc-item {
   padding: 14px 18px;
   border-bottom: 1px solid rgba(0,0,0,.05);
   cursor: pointer; position: relative;
-  transition: background .1s;
+  background: var(--surf);
+  transition: background .1s, transform .2s ease;
+  will-change: transform;
 }
-.loc-item:hover { background: rgba(0,0,0,.03) }
+.loc-item:hover { background: color-mix(in srgb, var(--surf) 97%, #000) }
 .loc-item:hover .loc-rm { opacity: 1 }
-.loc-item.active { background: rgba(196,92,58,.06) }
+.loc-item.active { background: color-mix(in srgb, var(--surf) 94%, var(--accent)) }
 .loc-item.active::before {
   content: ''; position: absolute; left: 0; top: 0;
   width: 2px; height: 100%; background: var(--accent);
@@ -454,19 +465,21 @@ body::after {
 
 /* ── MOBILE ── */
 @media(max-width: 768px) {
-  :root { --sb-w: 100vw }
+  :root { --sb-w: 85vw }
   .sidebar {
     position: fixed; top: 44px; left: 0;
     height: calc(100vh - 44px);
     z-index: 200; box-shadow: 4px 0 24px rgba(0,0,0,.1);
-    transform: translateX(0); width: var(--sb-w);
+    transform: translateX(-100%); width: var(--sb-w);
   }
+  .sidebar:not(.hidden) { transform: translateX(0) }
   .sidebar.hidden { transform: translateX(-100%) }
   .sidebar-backdrop { display: block }
   .hero { padding: 28px 20px 24px }
-  .hero-stats { gap: 24px }
+  .hero-stats { gap: 20px; flex-wrap: wrap }
   .summary-box { padding: 24px 20px }
   .sources-box { padding: 20px }
+  .src-grid { grid-template-columns: repeat(2, 1fr) }
   .content-area { grid-template-columns: 1fr }
   .metrics-col {
     flex-direction: row; flex-wrap: wrap;
@@ -474,14 +487,19 @@ body::after {
   }
   .metric { flex: 1; min-width: 90px; padding: 16px 12px }
   .metric + .metric { border-top: none; border-left: 1px solid var(--bdr) }
+  .forecast-strip {
+    overflow-x: auto; -webkit-overflow-scrolling: touch;
+    grid-template-columns: repeat(7, minmax(48px, 1fr));
+  }
 }
 @media(max-width: 480px) {
-  .forecast-strip { grid-template-columns: repeat(7, 1fr) }
-  .fd { padding: 12px 6px }
-  .fd-hi { font-size: 18px }
+  .fd { padding: 12px 5px }
+  .fd-hi { font-size: 17px }
+  .fd-name { font-size: 7px }
   .topbar-loc { display: none }
-  .hero-stats { gap: 18px }
-  .hstat-val { font-size: 19px }
+  .hero-stats { gap: 14px }
+  .hstat-val { font-size: 18px }
+  .hstat-label { font-size: 6px }
 }
 
 /* scrollbar */
@@ -688,7 +706,7 @@ const FORECAST=[
   {day:'FRI',icon:'rain',hi:28,lo:24,rain:78},
 ];
 
-let activeLoc=0,unit='C',sidebarOpen=true,selectedCity=null,selectedDay=0;
+let activeLoc=0,unit='C',sidebarOpen=window.innerWidth>768,selectedCity=null,selectedDay=0;
 
 const ICON_TO_COND={
   'sun':'CLEAR','partly-cloudy':'PARTLY CLOUDY',
@@ -704,18 +722,70 @@ function toggleSidebar(){
   document.getElementById('sidebar').classList.toggle('hidden',!sidebarOpen);
   document.getElementById('sb-backdrop').classList.toggle('visible',sidebarOpen&&window.innerWidth<=768);
 }
+function initSidebar(){
+  if(!sidebarOpen){
+    document.getElementById('sidebar').classList.add('hidden');
+  }
+}
 
 /* ── SIDEBAR RENDER ── */
 function renderSidebar(){
   document.getElementById('loc-list').innerHTML=locations.map((l,i)=>`
-    <div class="loc-item ${i===activeLoc?'active':''}" onclick="selectLoc(${i})">
-      <div class="loc-row">
-        <span class="loc-name">${l.name}</span>
-        <span class="loc-temp">${fmt(l.temp)}°</span>
+    <div class="loc-swipe-wrap">
+      <div class="loc-delete-bg">Remove</div>
+      <div class="loc-item ${i===activeLoc?'active':''}" data-idx="${i}" onclick="selectLoc(${i})">
+        <div class="loc-row">
+          <span class="loc-name">${l.name}</span>
+          <span class="loc-temp">${fmt(l.temp)}°</span>
+        </div>
+        <div class="loc-sub">${l.condition}</div>
+        <button class="loc-rm" onclick="removeLoc(event,${i})">×</button>
       </div>
-      <div class="loc-sub">${l.condition}</div>
-      <button class="loc-rm" onclick="removeLoc(event,${i})">×</button>
     </div>`).join('');
+  attachSwipeToDelete();
+}
+
+/* ── SWIPE TO DELETE ── */
+function attachSwipeToDelete(){
+  document.querySelectorAll('.loc-item').forEach(item=>{
+    let startX,startY,curX=0,isHoriz=false,moved=false;
+    const THRESHOLD=72;
+
+    item.addEventListener('touchstart',e=>{
+      startX=e.touches[0].clientX;
+      startY=e.touches[0].clientY;
+      curX=0;isHoriz=false;moved=false;
+      item.style.transition='none';
+    },{passive:true});
+
+    item.addEventListener('touchmove',e=>{
+      const dx=e.touches[0].clientX-startX;
+      const dy=e.touches[0].clientY-startY;
+      if(!moved){
+        if(Math.abs(dy)>Math.abs(dx))return;
+        if(Math.abs(dx)>6){moved=true;isHoriz=true;}
+      }
+      if(!isHoriz)return;
+      e.preventDefault();
+      curX=Math.min(0,dx);
+      item.style.transform=`translateX(${curX}px)`;
+    },{passive:false});
+
+    item.addEventListener('touchend',()=>{
+      if(!moved||!isHoriz)return;
+      // suppress the follow-up click so selectLoc doesn't fire
+      const suppress=e=>{e.stopPropagation();item.removeEventListener('click',suppress,true);};
+      item.addEventListener('click',suppress,true);
+      item.style.transition='transform .2s ease';
+      if(curX<-THRESHOLD){
+        item.style.transform='translateX(-110%)';
+        const i=parseInt(item.dataset.idx);
+        setTimeout(()=>removeLoc({stopPropagation:()=>{}},i),190);
+      }else{
+        item.style.transform='translateX(0)';
+      }
+    },{passive:true});
+  });
 }
 
 function selectLoc(i){
@@ -947,6 +1017,7 @@ function showToast(msg){
 }
 
 /* ── INIT ── */
+initSidebar();
 renderAll();
 
 if('serviceWorker' in navigator){
